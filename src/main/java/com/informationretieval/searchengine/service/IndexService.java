@@ -6,6 +6,7 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy;
+import org.elasticsearch.action.admin.indices.cache.clear.ClearIndicesCacheRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
@@ -85,6 +86,8 @@ public class IndexService {
         builder.endObject();
         request.mapping(builder);
 
+        ClearIndicesCacheRequest requestAll = new ClearIndicesCacheRequest();
+
         CreateIndexResponse createIndexResponse = restClient.indices().create(request, RequestOptions.DEFAULT);
 
         restClient.close();
@@ -108,6 +111,8 @@ public class IndexService {
                         .setHttpClientConfigCallback(httpAsyncClientBuilder ->
                                 httpAsyncClientBuilder.setDefaultCredentialsProvider(cp)
                                         .setKeepAliveStrategy(new DefaultConnectionKeepAliveStrategy())));
+
+        ClearIndicesCacheRequest requestAll = new ClearIndicesCacheRequest();
 
         DeleteIndexRequest request = new DeleteIndexRequest("twitter");
         AcknowledgedResponse deleteIndexResponse = restClient.indices().delete(request, RequestOptions.DEFAULT);

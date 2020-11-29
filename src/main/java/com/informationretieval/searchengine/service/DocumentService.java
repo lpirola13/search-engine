@@ -6,6 +6,7 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy;
+import org.elasticsearch.action.admin.indices.cache.clear.ClearIndicesCacheRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -52,6 +53,8 @@ public class DocumentService {
                         .setHttpClientConfigCallback(httpAsyncClientBuilder ->
                                 httpAsyncClientBuilder.setDefaultCredentialsProvider(cp)
                                         .setKeepAliveStrategy(new DefaultConnectionKeepAliveStrategy())));
+
+        ClearIndicesCacheRequest requestAll = new ClearIndicesCacheRequest();
 
         BulkRequest request = new BulkRequest();
         for (Status status : statuses) {
