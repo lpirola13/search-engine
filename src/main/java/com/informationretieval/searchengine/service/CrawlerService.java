@@ -68,85 +68,14 @@ public class CrawlerService {
 
     private static final Logger logger = Logger.getLogger(CrawlerService.class);
     private IndexService indexService;
+    private DocumentService documentService;
 
     @Autowired
-    public CrawlerService(IndexService indexService) {
+    public CrawlerService(IndexService indexService, DocumentService documentService) {
         this.indexService = indexService;
+        this.documentService = documentService;
     }
 
-    @Async
-    public void startCrawler() {
-        ConfigurationBuilder cb = new ConfigurationBuilder();
-        cb.setJSONStoreEnabled(true);
-        Twitter twitter = new TwitterFactory(cb.build()).getInstance();
-        Gson gson = new GsonBuilder().create();
-        String path = "/home/tweets";
-
-        Directory dir = null;
-        try {
-            Files.createDirectories(Paths.get("/home/index"));
-            Files.createDirectories(Paths.get("/home/tweets"));
-            dir = FSDirectory.open(Paths.get("/home/index"));
-        } catch (IOException e) {
-            logger.error("Failed to open index dir: " + e.getMessage());
-        }
-
-        Analyzer analyzer = new StandardAnalyzer();
-        IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
-
-        iwc.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
-        iwc.setRAMBufferSizeMB(256.0);
-
-        IndexWriter writerDoc = null;
-        try {
-            writerDoc = new IndexWriter(dir, iwc);
-        } catch (IOException e) {
-            logger.error("Failed to open writer: " + e.getMessage());
-        }
-
-
-        try {
-            Files.createDirectories(Paths.get(path));
-        } catch (IOException e) {
-            logger.error("Failed to make tweets dir: " + e.getMessage());
-        }
-        try {
-            String user = "Cristiano";
-            logger.info("GET @" + user + "'s timeline");
-            //for (int i = 1; i < 101; i++) {
-            int i = 1;
-                List<Status> statuses = twitter.getUserTimeline(user, new Paging(i, 10));
-                logger.info("GET page " + i + " out of 100");
-                TwitterUser twitterUser = new TwitterUser();
-                twitterUser.setId(statuses.get(0).getUser().getId());
-                twitterUser.setName(statuses.get(0).getUser().getName());
-                twitterUser.setScreenName(statuses.get(0).getUser().getScreenName());
-                for (Status status : statuses) {
-                    if (!status.isRetweet()) {
-                        logger.info("GET @" + status.getUser().getScreenName() + " - " + status.getId() + " - " + status.getCreatedAt());
-                        Writer writer = new FileWriter(path + "/" + status.getId() + ".json");
-                        Tweet tweet = new Tweet();
-                        tweet.setId(status.getId());
-                        tweet.setText(status.getText());
-                        tweet.setCreatedAt(status.getCreatedAt());
-                        tweet.setLang(status.getLang());
-                        tweet.setUser(twitterUser);
-                        gson.toJson(tweet, writer);
-                        writer.flush();
-                        writer.close();
-                        Document doc = getDocument(tweet);
-                        writerDoc.addDocument(doc);
-                    }
-                }
-                TimeUnit.SECONDS.sleep(5);
-                writerDoc.close();
-
-
-           // }
-        } catch (TwitterException | IOException | InterruptedException te) {
-            logger.error("Failed to get timeline: " + te.getMessage());
-        }
-    }
 
     private Document getDocument(Tweet tweet) {
         Document doc = new Document();
@@ -294,6 +223,36 @@ public class CrawlerService {
         } catch (TwitterException | IOException te) {
             logger.error("Failed to get timeline: " + te.getMessage());
         }
+    }
+
+    @Async
+    public void startCrawler() {
+        ConfigurationBuilder cb = new ConfigurationBuilder();
+        cb.setJSONStoreEnabled(true);
+        Twitter twitter = new TwitterFactory(cb.build()).getInstance();
+
+        logger.info("CRAWLER-SERVICE: started crawler");
+
+        try {
+            String user = "Cristiano";
+            logger.info("CRAWLER-SERVICE: getting @" + user + "'s timeline");
+            for (int i = 1; i < 10; i++) {
+                logger.info("CRAWLER-SERVICE: getting page " + i + " out of 100");
+                List<Status> statuses = twitter.getUserTimeline(user, new Paging(i, 10));
+                boolean failures = documentService.indexDocuments(statuses);
+                if (failures) {
+                    logger.error("CRAWLER-SERVICE: something went wrong during indexing");
+                } else {
+                    logger.info("CRAWLER-SERVICE: documents indexed");
+                }
+            }
+        } catch (TwitterException e) {
+            logger.error("CRAWLER-SERVICE: something went wrong during tweets crawling");
+        } catch (IOException e) {
+            logger.error("CRAWLER-SERVICE: something went wrong during indexing");
+        }
+        //TimeUnit.SECONDS.sleep(5);
+
     }
 
 }

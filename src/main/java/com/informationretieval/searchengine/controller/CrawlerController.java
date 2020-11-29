@@ -27,22 +27,6 @@ public class CrawlerController {
         return "Crawler started!";
     }
 
-    @GetMapping("/search")
-    public String searchCrawler() {
-        this.crawlerService.searchDoc();
-        return "Crawler started!";
-    }
 
-    @GetMapping("/bonsai")
-    public String tryBonsai() {
-        this.crawlerService.testBonsai();
-        return "Bonsai tested!";
-    }
-
-    @GetMapping("/indexing")
-    public String indexing() {
-        this.crawlerService.crawlProfile();
-        return "crawl tested!";
-    }
 
 }
