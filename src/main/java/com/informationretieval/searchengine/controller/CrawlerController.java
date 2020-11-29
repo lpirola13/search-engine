@@ -44,5 +44,5 @@ public class CrawlerController {
         this.crawlerService.crawlProfile();
         return "crawl tested!";
     }
-    
+
 }
