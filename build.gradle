@@ -28,6 +28,10 @@ dependencies {
     implementation 'org.elasticsearch:elasticsearch-core:7.10.0'
 }
 
+ext {
+    set('elasticsearch.version', '7.10.0')
+}
+
 test {
     useJUnitPlatform()
 }
