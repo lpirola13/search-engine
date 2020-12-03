@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}" type="text/css"/>
+    <script th:src="@{/webjars/jquery/jquery.min.js}"></script>
+    <script th:src="@{/webjars/bootstrap/js/bootstrap.min.js}"></script>
+    <title>Search Engine</title>
+</head>
+<body class="bg-info " >
+<nav class="sticky-top bg-light  border-bottom border-dark overflow-hidden" style="height: 250px;">
+    <div class="d-flex justify-content-center pt-5 pl-3 pr-3 w-100 overflow-hidden">
+        <form class="form-row w-100" th:action="@{/}" method="get">
+            <div class="form-group d-flex col-3">
+                <label for="query" class=" p-2 ">Query</label>
+                <input class="form-control" type="text" name="query" id="query" th:value="${query}"  placeholder="String query" aria-label="Search">
+            </div>
+            <div class="form-group d-flex col-3">
+                <label for="hashtags" class="p-2 ml-3">Hashtags</label>
+                <input class="form-control" type="text" name="hashtags" id="hashtags" th:value="${hashtags}"  placeholder="Separated by commas" aria-label="Search">
+            </div>
+            <div class="form-group d-flex col-3">
+                <label for="mentions" class="p-2 ml-3">Mentions</label>
+                <input class="form-control" type="text" name="mentions" id="mentions" th:value="${mentions}"  placeholder="Separated by commas" aria-label="Search">
+            </div>
+            <div class="form-group d-flex col-3">
+                <input type="submit" class="btn btn-info ml-3 flex-fill" value="Search">
+                <input class="btn btn-danger ml-3 flex-fill" type="button" name="reset" value="Reset" id="reset123" onclick="customReset();">
+            </div>
+        </form>
+    </div>
+    <div class="bg-light d-flex p-2">
+        <div class="col-1 p-1 m-2 ">
+            Top Hashtags:
+        </div>
+        <div class="col-11 d-flex  overflow-auto">
+            <div th:each="hashtag: ${topHashtags}" class=" p-1 bg-info text-white border border-dark rounded m-2">
+                <span th:text="'#' + ${hashtag}" class="font-weight-bold"></span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-light d-flex p-2">
+        <div class="col-1 p-1 m-2 ">
+            Top Mentions:
+        </div>
+        <div class="col-11 d-flex  overflow-auto">
+            <div th:each="mention: ${topMentions}" class=" p-1 bg-info text-white border border-dark rounded m-2">
+                <span th:text="'@' + ${mention}" class="font-weight-bold"></span>
+            </div>
+        </div>
+    </div>
+</nav>
+<div class="position-fixed bg-info" style="height: 250px;">
+</div>
+<div class="container-fluid justify-content-center pt-3 bg-info  overflow-auto ">
+    <div th:each="hit, index: ${hits}" class="mx-auto p-3 col-md-4 bg-light border border-dark rounded m-2">
+        <span class="font-weight-bold">Position</span>
+        <span th:text="${index.index + 1}"></span>
+        <span class="font-weight-bold">&nbsp;&nbsp;&nbsp;Score</span>
+        <span th:text="${#numbers.formatDecimal(hit.score, 0, 'COMMA', 2, 'POINT')}"></span><br>
+        <span th:text="${hit.user.name}" class="font-weight-bold"></span><br>
+        <span th:text="'@' + ${hit.user.screenName}"></span>
+        <th:block th:with="sdf = ${new java.text.SimpleDateFormat('yyyy-MM-dd''T''HH:mm:ss')}">
+            <span th:text="${#dates.format(sdf.parse(hit.created_at), 'dd-MM-yyyy')}"></span>
+        </th:block>
+        <p th:text="${hit.text}" class="text-justify"></p>
+    </div>
+</div>
+</body>
+</html>
+<script>
+    function customReset()
+    {
+        document.getElementById("query").value = "";
+        document.getElementById("hashtags").value = "";
+        document.getElementById("mentions").value = "";
+    }
+</script>

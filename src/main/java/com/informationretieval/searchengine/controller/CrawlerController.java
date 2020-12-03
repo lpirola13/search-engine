@@ -2,16 +2,11 @@ package com.informationretieval.searchengine.controller;
 
 
 import com.informationretieval.searchengine.service.CrawlerService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
-
-@RestController()
+@Controller()
 @RequestMapping("/crawler")
 public class CrawlerController {
 
@@ -22,9 +17,9 @@ public class CrawlerController {
     }
 
     @GetMapping("/start")
-    public String startCrawler() {
-        this.crawlerService.startCrawler();
-        return "Crawler started!";
+    public String start() {
+        this.crawlerService.start();
+        return "crawler";
     }
 
 
