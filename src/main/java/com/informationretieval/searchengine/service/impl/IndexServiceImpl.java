@@ -128,8 +128,9 @@ public class IndexServiceImpl implements IndexService {
                             .startObject("custom_normalizer")
                                 .field("type", "custom")
                                 .startArray("filter")
-                                    .value("lowercase").
-                                endArray()
+                                    .value("lowercase")
+                                    .value("porter_stem")
+                                .endArray()
                             .endObject()
                         .endObject()
                     .endObject()
