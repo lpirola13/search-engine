@@ -108,6 +108,14 @@ public class IndexServiceImpl implements IndexService {
                     .field("number_of_shards",1)
                     .field("number_of_replicas",0)
                     .startObject("analysis")
+                        .startObject("filter")
+                            .startObject("synonym_filter")
+                                .field("type", "synonym")
+                                .startArray("synonyms")
+                                    .value("formula1, formula 1, f1")
+                                .endArray()
+                            .endObject()
+                        .endObject()
                         .startObject("analyzer")
                             .startObject("custom_analyzer")
                                 .field("type", "custom")
@@ -121,6 +129,22 @@ public class IndexServiceImpl implements IndexService {
                                     .value("apostrophe")
                                     .value("stop")
                                     .value("lowercase")
+                                    .value("porter_stem")
+                                .endArray()
+                            .endObject()
+                            .startObject("custom_search_analyzer")
+                                .field("type", "custom")
+                                .startObject("char_filter")
+                                    .field("type", "pattern_replace")
+                                    .field("pattern", "(?=(:\\\\w+:))")
+                                    .field("replacement", " ")
+                                .endObject()
+                                .field("tokenizer", "uax_url_email")
+                                .startArray("filter")
+                                    .value("apostrophe")
+                                    .value("stop")
+                                    .value("lowercase")
+                                    .value("synonym_filter")
                                     .value("porter_stem")
                                 .endArray()
                             .endObject()
@@ -208,7 +232,7 @@ public class IndexServiceImpl implements IndexService {
         return true;
     }
 
-    public List<Map<String, Object>> search(String query, String hashtags, String mentions) throws IOException {
+    public List<Map<String, Object>> search(String query, String hashtags, String mentions, boolean synonyms) throws IOException {
 
         logger.info("INDEX-SERVICE: search index");
 
@@ -227,7 +251,11 @@ public class IndexServiceImpl implements IndexService {
         BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
 
         if (query != null && !query.isEmpty()) {
-            queryBuilder.must(QueryBuilders.queryStringQuery(query).field("parsed_text"));
+            if (synonyms) {
+                queryBuilder.must(QueryBuilders.queryStringQuery(query).field("parsed_text").analyzer("custom_search_analyzer"));
+            } else {
+                queryBuilder.must(QueryBuilders.queryStringQuery(query).field("parsed_text"));
+            }
         }
 
         if (hashtagsList.size() > 0) {

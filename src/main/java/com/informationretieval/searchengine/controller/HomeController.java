@@ -21,15 +21,16 @@ public class HomeController {
     }
 
     @RequestMapping("/")
-    public String home(Model model, @RequestParam(required = false) String query, @RequestParam(required = false) String hashtags, @RequestParam(required = false) String mentions) {
+    public String home(Model model, @RequestParam(required = false) String query, @RequestParam(required = false) String hashtags, @RequestParam(required = false) String mentions, @RequestParam(required = false) boolean synonyms) {
         try {
-            logger.info("HOME-CONTROLLER: search query: " + query + " hashtags: " + hashtags + " mentions: " + mentions);
-            model.addAttribute("hits", this.indexService.search(query, hashtags, mentions));
+            logger.info("HOME-CONTROLLER: search query: " + query + " hashtags: " + hashtags + " mentions: " + mentions + " synonyms: " + synonyms);
+            model.addAttribute("hits", this.indexService.search(query, hashtags, mentions, synonyms));
             model.addAttribute("topHashtags", this.indexService.getTopHashtags());
             model.addAttribute("topMentions", this.indexService.getTopMentions());
             model.addAttribute("query", query);
             model.addAttribute("hashtags", hashtags);
             model.addAttribute("mentions", mentions);
+            model.addAttribute("synonyms", synonyms);
         } catch (IOException e) {
             logger.error("HOME-CONTROLLER: " + e.getMessage());
         }
