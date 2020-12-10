@@ -52,16 +52,16 @@ public class CrawlerServiceImpl implements CrawlerService {
                         logger.error("CRAWLER-SERVICE: error during indexing");
                         return;
                     }
-                    Thread.sleep(5500);
+                    Thread.sleep(10000);
                     logger.info("CRAWLER-SERVICE: getting @" + user + "'s timeline");
                     for (int i = 1; i <= pages; i++) {
                         logger.info("CRAWLER-SERVICE: get page " + i + " out of " + pages);
-                        List<Status> statuses = twitter.getUserTimeline(user, new Paging(i, 20));
+                        List<Status> statuses = twitter.getUserTimeline(user, new Paging(i, 10));
                         if (!tweetsIndexService.index(statuses)) {
                             logger.error("CRAWLER-SERVICE: error during indexing page " + i);
                             return;
                         }
-                        Thread.sleep(5500);
+                        Thread.sleep(10000);
                     }
                 }
                 logger.info("CRAWLER-SERVICE: end crawler");
