@@ -247,8 +247,8 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
                 return false;
             }
         } else {
-            logger.error("TWEETS-INDEX-SERVICE: no statuses");
-            return false;
+            logger.info("TWEETS-INDEX-SERVICE: no statuses");
+            return true;
         }
     }
 
