@@ -1,8 +1,13 @@
 package com.informationretieval.searchengine.service.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.informationretieval.searchengine.service.ElasticSearchService;
 import com.informationretieval.searchengine.service.TweetsIndexService;
 import com.informationretieval.searchengine.service.UsersIndexService;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.elasticsearch.action.admin.indices.get.GetIndexRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -13,8 +18,13 @@ import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import twitter4j.Logger;
+import twitter4j.Status;
+import twitter4j.User;
+
 import java.io.IOException;
 import java.util.*;
 
@@ -25,6 +35,8 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
     private final RestHighLevelClient restHighLevelClient;
     private final TweetsIndexService tweetsIndexService;
     private final UsersIndexService usersIndexService;
+    @Value("${bighugelabs.apikey}")
+    private String apikey;
 
     @Autowired
     public ElasticSearchServiceImpl(RestHighLevelClient restHighLevelClient, TweetsIndexService tweetsIndexService, UsersIndexService usersIndexService) {
@@ -34,10 +46,11 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
     }
 
     @Override
+    @Async
     @SuppressWarnings("deprecation")
-    public boolean resetIndices() {
+    public void reset() {
 
-        logger.info("ELASTIC-SEARCH-SERVICE: reset indices");
+        logger.info("ELASTIC-SEARCH-SERVICE: reset");
 
         boolean delete = true;
         GetIndexRequest request = new GetIndexRequest();
@@ -66,44 +79,47 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
                 }
                 if (delete) {
                     if (this.usersIndexService.create()) {
-                        return true;
+                        logger.info("ELASTIC-SEARCH-SERVICE: end reset");
                     } else {
                         logger.error("ELASTIC-SEARCH-SERVICE: error during users create");
-                        return false;
                     }
                 } else {
                     logger.error("ELASTIC-SEARCH-SERVICE: error during users delete");
-                    return false;
                 }
             } else {
                 logger.error("ELASTIC-SEARCH-SERVICE: error during tweets create");
-                return false;
             }
         } else {
             logger.error("ELASTIC-SEARCH-SERVICE: error during tweets delete");
-            return false;
         }
     }
 
     @Override
-    public boolean updateUsersProfile() {
+    @Async
+    public void update() {
+
+        logger.info("ELASTIC-SEARCH-SERVICE: update");
 
         List<Map<String, Object>> users = this.usersIndexService.getUsers();
         for (Map<String, Object> user : users) {
             String id = (String) user.get("id");
             List<String> keywords = this.tweetsIndexService.getKeywords(id);
-            if (!this.usersIndexService.updateProfile(id, keywords)) {
+            List<String> hashtags = this.tweetsIndexService.getHastags(id);
+            if (!this.usersIndexService.update(id, keywords, hashtags)) {
                 logger.error("ELASTIC-SEARCH-SERVICE: error during update profile " + id);
-                return false;
             }
         }
-        return true;
+        logger.info("ELASTIC-SEARCH-SERVICE: end update");
     }
 
     @Override
     public List<Map<String, Object>> search(String query, String hashtags, String mentions, boolean synonyms, boolean self, String id) {
 
-        logger.info("ELASTIC-SEARCH-SERVICE: search");
+        if (id != null) {
+            logger.info("HOME-CONTROLLER: search user: " + id + " query: " + query + " hashtags: " + hashtags + " mentions: " + mentions + " synonyms: " + synonyms + " self: " + self);
+        } else {
+            logger.info("HOME-CONTROLLER: search query: " + query + " hashtags: " + hashtags + " mentions: " + mentions + " synonyms: " + synonyms + " self: " + self);
+        }
 
         List<String> hashtagsList = new ArrayList<>();
         if (hashtags != null && !hashtags.isEmpty()) {
@@ -137,9 +153,10 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
             Map<String, Object> user = this.usersIndexService.getUser(id);
             @SuppressWarnings("unchecked")
             List<String> profile = (List<String>) user.get("profile");
-            for (String keyword : profile) {
-                queryBuilder.should(QueryBuilders.termQuery("parsed_text", keyword));
-            }
+            @SuppressWarnings("unchecked")
+            List<String> profileHashtags = (List<String>) user.get("hashtags");
+            queryBuilder.should(QueryBuilders.termsQuery("parsed_text", profile));
+            queryBuilder.should(QueryBuilders.termsQuery("hashtags", profileHashtags));
         }
 
         if (hashtagsList.size() > 0) {
@@ -182,7 +199,9 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
     }
 
     @Override
-    public List<Map<String, String>> makeUsers(String selected) {
+    public List<Map<String, String>> getUsers(String selected) {
+
+        logger.info("ELASTIC-SEARCH-SERVICE: getUsers selected: " + selected);
 
         List<Map<String, String>> users = new ArrayList<>();
 
@@ -218,12 +237,82 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
 
     @Override
     public List<String> getTopHashtags() {
+
+        logger.info("ELASTIC-SEARCH-SERVICE: getTopHashtags");
+
         return this.tweetsIndexService.getTopHashtags();
     }
 
     @Override
     public List<String> getTopMentions() {
+
+        logger.info("ELASTIC-SEARCH-SERVICE: getTopMentions");
+
         return this.tweetsIndexService.getTopMentions();
+    }
+
+    @Override
+    @Async
+    public void synonyms() {
+
+        logger.info("ELASTIC-SEARCH-SERVICE: synonyms");
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        List<String> synonyms = new ArrayList<>();
+
+        List<Map<String, Object>> users = this.usersIndexService.getUsers();
+        for (Map<String, Object> user : users) {
+
+            List<String> keywords = this.tweetsIndexService.getKeywords((String) user.get("id"));
+
+            for (String keyword : keywords) {
+
+                String finalString = keyword;
+
+                if (keyword.length() > 1) {
+
+                    try (CloseableHttpClient client = HttpClients.createDefault()) {
+
+                        HttpGet thesaurusRequest = new HttpGet("https://words.bighugelabs.com/api/2/" + apikey + "/" + keyword + "/json");
+
+                        JsonNode thesaurusResponse = client.execute(thesaurusRequest, httpResponse -> mapper.readTree(httpResponse.getEntity().getContent()));
+
+                        if (thesaurusResponse.get("noun") != null) {
+                            if (thesaurusResponse.get("noun").get("syn") != null) {
+                                for (JsonNode synonymJSON : thesaurusResponse.get("noun").get("syn")) {
+                                    finalString = finalString.concat(", ").concat(synonymJSON.asText());
+                                }
+                                logger.info(finalString);
+                                synonyms.add(finalString);
+                            }
+                        }
+                    } catch (IOException e) {
+                        logger.error(e.getMessage());
+                    }
+                }
+            }
+
+        }
+        if (this.tweetsIndexService.synonyms(synonyms)) {
+            logger.error("ELASTIC-SEARCH-SERVICE: error during updating synonyms");
+        }
+    }
+
+    @Override
+    public boolean indexUser(User user) {
+
+        logger.info("ELASTIC-SEARCH-SERVICE: indexUser");
+
+        return this.usersIndexService.index(user);
+    }
+
+    @Override
+    public boolean indexTweets(List<Status> statuses) {
+
+        logger.info("ELASTIC-SEARCH-SERVICE: indexTweets");
+
+        return this.tweetsIndexService.index(statuses);
     }
 
 }

@@ -3,6 +3,8 @@ package com.informationretieval.searchengine.service.impl;
 import com.informationretieval.searchengine.service.TweetsIndexService;
 import com.vdurmont.emoji.EmojiParser;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
+import org.elasticsearch.action.admin.indices.open.OpenIndexRequest;
+import org.elasticsearch.action.admin.indices.settings.put.UpdateSettingsRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
@@ -10,18 +12,20 @@ import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.indices.CloseIndexRequest;
 import org.elasticsearch.client.indices.CreateIndexRequest;
-import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.ParsedSignificantStringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.SignificantTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
-import org.elasticsearch.search.aggregations.bucket.terms.heuristic.ChiSquare;
-import org.elasticsearch.search.aggregations.bucket.terms.heuristic.GND;
+import org.elasticsearch.search.aggregations.bucket.terms.heuristic.JLHScore;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,12 +33,15 @@ import twitter4j.*;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class TweetsIndexServiceImpl implements TweetsIndexService {
 
     private static final Logger logger = Logger.getLogger(TweetsIndexServiceImpl.class);
     private final RestHighLevelClient restHighLevelClient;
+
 
     @Autowired
     public TweetsIndexServiceImpl(RestHighLevelClient restHighLevelClient) {
@@ -44,7 +51,7 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
     @Override
     public boolean create() {
 
-        logger.info("TWEETS-INDEX-SERVICE: create index");
+        logger.info("TWEETS-INDEX-SERVICE: create");
 
         CreateIndexRequest request = new CreateIndexRequest("tweets");
 
@@ -59,7 +66,7 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
                     .endObject()
                     .startObject("parsed_text")
                     .field("type", "text")
-                    .field("term_vector","yes")
+                    .field("similarity","my_similarity")
                     .field("analyzer","custom_analyzer")
                     .endObject()
                     .startObject("created_at")
@@ -86,10 +93,6 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
                     .field("type", "keyword")
                     .field("normalizer","custom_normalizer")
                     .endObject()
-                    .startObject("urls")
-                    .field("type", "keyword")
-                    .field("normalizer","custom_normalizer")
-                    .endObject()
                     .endObject()
                     .endObject();
 
@@ -104,11 +107,16 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
             settings.startObject()
                     .field("number_of_shards",1)
                     .field("number_of_replicas",0)
+                    .startObject("similarity")
+                    .startObject("my_similarity")
+                    .field("type", "LMDirichlet")
+                    .endObject()
+                    .endObject()
                     .startObject("analysis")
                     .startObject("filter")
                     .startObject("synonym_filter")
                     .field("type", "synonym")
-                    .startArray("synonyms")
+                    .startArray("synonyms_graph")
                     .value("formula1, formula 1, f1")
                     .endArray()
                     .endObject()
@@ -185,7 +193,7 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
     @Override
     public boolean delete() {
 
-        logger.info("TWEETS-INDEX-SERVICE: delete index");
+        logger.info("TWEETS-INDEX-SERVICE: delete");
 
         DeleteIndexRequest request = new DeleteIndexRequest("tweets");
 
@@ -199,6 +207,8 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
 
     public boolean index(List<Status> statuses){
 
+        logger.info("TWEETS-INDEX-SERVICE: index");
+
         BulkRequest request = new BulkRequest();
 
         int total = 0;
@@ -207,25 +217,24 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
                 if (!status.isRetweet()) {
                     total++;
                     logger.info("TWEETS-INDEX-SERVICE: indexing document " + status.getId());
-                    List<String> hashtags = new ArrayList<>();
-                    for (HashtagEntity he : status.getHashtagEntities()) {
-                        hashtags.add(he.getText());
-                    }
-
-                    List<String> mentions = new ArrayList<>();
-                    for (UserMentionEntity ume : status.getUserMentionEntities()) {
-                        mentions.add(ume.getScreenName());
-                    }
-
-                    List<String> urls = new ArrayList<>();
-                    for (URLEntity urle : status.getURLEntities()) {
-                        urls.add(urle.getExpandedURL());
-                    }
 
                     Map<String, String> user = new HashMap<>();
                     user.put("id", String.valueOf(status.getUser().getId()));
                     user.put("name", status.getUser().getName());
                     user.put("screenName", status.getUser().getScreenName());
+
+                    List<String> hashtags = new ArrayList<>();
+                    Matcher m1 = Pattern.compile("\\B#\\w\\w+").matcher(status.getText());
+                    while (m1.find()) {
+                        hashtags.add(m1.group());
+
+                    }
+
+                    List<String> mentions = new ArrayList<>();
+                    Matcher m2 = Pattern.compile("(?<=^|(?<=[^a-zA-Z0-9-_\\.]))@([A-Za-z]+[A-Za-z0-9-_]+)").matcher(status.getText());
+                    while (m2.find()) {
+                        mentions.add(m2.group());
+                    }
 
                     request.add(new IndexRequest("tweets")
                             .id(String.valueOf(status.getId()))
@@ -235,7 +244,6 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
                                     "created_at", status.getCreatedAt(),
                                     "hashtags", hashtags,
                                     "mentions", mentions,
-                                    "urls", urls,
                                     "user", user));
                 }
             }
@@ -261,7 +269,7 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
 
     public List<String> getTopHashtags() {
 
-        logger.info("TWEETS-INDEX-SERVICE: get top hashtags");
+        logger.info("TWEETS-INDEX-SERVICE: getTopHashtags");
 
         SearchRequest searchRequest = new SearchRequest("tweets");
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
@@ -287,7 +295,7 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
 
     public List<String> getTopMentions() {
 
-        logger.info("TWEETS-INDEX-SERVICE: get top mentions");
+        logger.info("TWEETS-INDEX-SERVICE: getTopMentions");
 
         SearchRequest searchRequest = new SearchRequest("tweets");
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
@@ -313,13 +321,13 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
 
     public List<String> getKeywords(String id){
 
-        logger.info("TWEETS-INDEX-SERVICE: get keywords user " + id);
+        logger.info("TWEETS-INDEX-SERVICE: getKeywords id: " + id);
 
         SearchRequest searchRequest = new SearchRequest("tweets");
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
 
         searchSourceBuilder.query(QueryBuilders.termQuery("user.id", id));
-        searchSourceBuilder.size(0).aggregation(AggregationBuilders.significantText("keywords", "parsed_text").size(20).significanceHeuristic(new GND(false)));
+        searchSourceBuilder.size(0).aggregation(AggregationBuilders.significantText("keywords", "parsed_text").size(30).significanceHeuristic(new JLHScore()));
 
         searchRequest.source(searchSourceBuilder);
 
@@ -342,6 +350,104 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
         }
     }
 
+    @Override
+    public List<String> getHastags(String id) {
+
+        logger.info("TWEETS-INDEX-SERVICE: getHashtags id: " + id);
+
+        SearchRequest searchRequest = new SearchRequest("tweets");
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.size(0).query(QueryBuilders.termQuery("user.id", id)).aggregation(AggregationBuilders.terms("hashtags").field("hashtags").size(10));
+        searchRequest.source(searchSourceBuilder);
+
+        List<String> hashtags = new ArrayList<>();
+
+        try {
+            SearchResponse response = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);
+            if (response.status().equals(RestStatus.OK)) {
+                Terms topHashtags = response.getAggregations().get("hashtags");
+                hashtags = buildTermsList(topHashtags);
+            } else {
+                logger.error("TWEETS-INDEX-SERVICE: bad response");
+            }
+            return hashtags;
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+            return hashtags;
+        }
+    }
+
+    @Override
+    public boolean synonyms(List<String> synonyms) {
+        logger.info("TWEETS-INDEX-SERVICE: synonyms");
+
+        logger.info("TWEETS-INDEX-SERVICE: closing tweets index");
+        try {
+            if (restHighLevelClient.indices().close(new CloseIndexRequest("tweets"), RequestOptions.DEFAULT).isAcknowledged()) {
+                logger.info("TWEETS-INDEX-SERVICE: updating synonyms");
+
+                UpdateSettingsRequest request = new UpdateSettingsRequest("tweets");
+                XContentBuilder settings;
+                try {
+                    settings = XContentFactory.jsonBuilder();
+                    settings.startObject()
+                            .startObject("analysis")
+                            .startObject("filter")
+                            .startObject("synonym_filter")
+                            .field("type", "synonym_graph")
+                            .startArray("synonyms");
+
+                    for (String synonym : synonyms) {
+                        settings.value(synonym);
+                    }
+
+                    settings.endArray()
+                            .endObject()
+                            .endObject()
+                            .endObject()
+                            .endObject();
+                } catch (IOException e) {
+                    logger.error(e.getMessage());
+                    return true;
+                }
+
+                request.settings(Strings.toString(settings), XContentType.JSON);
+
+                try {
+                    if (restHighLevelClient.indices().putSettings(request, RequestOptions.DEFAULT).isAcknowledged()) {
+                        logger.info("TWEETS-INDEX-SERVICE: opening tweets index");
+                        try {
+                            restHighLevelClient.indices().open(new OpenIndexRequest("tweets"), RequestOptions.DEFAULT);
+                            return false;
+                        } catch (IOException e) {
+                            logger.error(e.getMessage());
+                            return true;
+                        }
+                    } else {
+                        logger.error("TWEETS-INDEX-SERVICE: no acknowledged");
+                        logger.info("TWEETS-INDEX-SERVICE: opening tweets index");
+                        try {
+                            restHighLevelClient.indices().open(new OpenIndexRequest("tweets"), RequestOptions.DEFAULT);
+                            return false;
+                        } catch (IOException e) {
+                            logger.error(e.getMessage());
+                            return true;
+                        }
+                    }
+                } catch (IOException e) {
+                    logger.error(e.getMessage());
+                    return true;
+                }
+            } else {
+                logger.error("TWEETS-INDEX-SERVICE: no acknowledged");
+                return true;
+            }
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+            return true;
+        }
+    }
+
     private List<String> buildTermsList(Terms terms) {
         List<String> termsList = new ArrayList<>();
 
@@ -350,6 +456,8 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
         }
 
         return termsList;
+
     }
+
 
 }

@@ -1,10 +1,8 @@
 package com.informationretieval.searchengine.service;
 
 import org.springframework.stereotype.Service;
-import twitter4j.Status;
 import twitter4j.User;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +13,7 @@ public interface UsersIndexService {
     boolean delete();
     boolean index(User user);
     List<Map<String, Object>> getUsers();
-    boolean updateProfile(String id, List<String> keywords);
+    boolean update(String id, List<String> keywords, List<String> hashtags);
     Map<String, Object> getUser(String id);
 
 }

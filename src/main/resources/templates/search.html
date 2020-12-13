@@ -62,7 +62,7 @@
         </div>
         <div class="col-10 d-flex  overflow-auto">
             <div th:each="hashtag: ${topHashtags}" class=" p-1 bg-info text-white border border-dark rounded mr-2">
-                <span th:text="'#' + ${hashtag}" class="font-weight-bold"></span>
+                <span th:text="${hashtag}" class="font-weight-bold"></span>
             </div>
         </div>
     </div>
@@ -72,7 +72,7 @@
         </div>
         <div class="col-10 d-flex  overflow-auto">
             <div th:each="mention: ${topMentions}" class=" p-1 bg-info text-white border border-dark rounded mr-2">
-                <span th:text="'@' + ${mention}" class="font-weight-bold"></span>
+                <span th:text="${mention}" class="font-weight-bold"></span>
             </div>
         </div>
     </div>
@@ -119,7 +119,7 @@
             self.attr('disabled', true);
         }
 
-        search.change(function() {
+        search.click(function() {
             submitForm();
         });
 
@@ -141,7 +141,7 @@
             submitForm();
         });
 
-        reset.change(function() {
+        reset.click(function() {
             $("#query").val("");
             $("#hashtags").val("");
             $("#mentions").val("");

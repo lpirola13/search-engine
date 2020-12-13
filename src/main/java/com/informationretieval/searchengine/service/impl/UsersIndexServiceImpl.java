@@ -36,7 +36,7 @@ public class UsersIndexServiceImpl implements UsersIndexService {
 
     @Override
     public boolean create() {
-        logger.info("USER-INDEX-SERVICE: create index");
+        logger.info("USERS-INDEX-SERVICE: create index");
 
         CreateIndexRequest request = new CreateIndexRequest("users");
 
@@ -55,6 +55,9 @@ public class UsersIndexServiceImpl implements UsersIndexService {
                     .field("type", "keyword")
                     .endObject()
                     .startObject("profile")
+                    .field("type", "keyword")
+                    .endObject()
+                    .startObject("hashtags")
                     .field("type", "keyword")
                     .endObject()
                     .endObject()
@@ -89,7 +92,7 @@ public class UsersIndexServiceImpl implements UsersIndexService {
 
     @Override
     public boolean delete() {
-        logger.info("USER-INDEX-SERVICE: delete index");
+        logger.info("USERS-INDEX-SERVICE: delete index");
 
         DeleteIndexRequest request = new DeleteIndexRequest("users");
 
@@ -105,7 +108,7 @@ public class UsersIndexServiceImpl implements UsersIndexService {
     @Override
     public boolean index(User user) {
 
-        logger.info("USER-INDEX-SERVICE: index user");
+        logger.info("USERS-INDEX-SERVICE: index user: " + user.getScreenName());
 
         Map<String, String> userMap = new HashMap<>();
         userMap.put("id", String.valueOf(user.getId()));
@@ -124,7 +127,7 @@ public class UsersIndexServiceImpl implements UsersIndexService {
 
     public List<Map<String, Object>> getUsers() {
 
-        logger.info("USERS-INDEX-SERVICE: get users");
+        logger.info("USERS-INDEX-SERVICE: getUsers");
 
         SearchRequest searchRequest = new SearchRequest("users");
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
@@ -152,12 +155,13 @@ public class UsersIndexServiceImpl implements UsersIndexService {
         }
     }
 
-    public boolean updateProfile(String id, List<String> keywords){
+    public boolean update(String id, List<String> keywords, List<String> hashtags){
 
-        logger.info("USERS-INDEX-SERVICE: update profile user " + id);
+        logger.info("USERS-INDEX-SERVICE: update user: " + id);
 
         Map<String, Object> user = new HashMap<>();
         user.put("profile", keywords);
+        user.put("hashtags", hashtags);
 
         UpdateRequest request = new UpdateRequest("users", id).doc(user);
 
@@ -177,7 +181,7 @@ public class UsersIndexServiceImpl implements UsersIndexService {
 
     public Map<String, Object> getUser(String id){
 
-        logger.info("USERS-INDEX-SERVICE: get user");
+        logger.info("USERS-INDEX-SERVICE: getUser id: " + id);
 
         SearchRequest searchRequest = new SearchRequest("users");
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();

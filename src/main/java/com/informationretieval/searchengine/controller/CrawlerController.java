@@ -4,7 +4,6 @@ package com.informationretieval.searchengine.controller;
 import com.informationretieval.searchengine.service.CrawlerService;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -22,18 +21,6 @@ public class CrawlerController {
     public String start(@RequestParam String user) {
         this.crawlerService.start(user);
         return "crawler";
-    }
-
-    @GetMapping("/reset")
-    public String reset() {
-        this.crawlerService.reset();
-        return "reset";
-    }
-
-    @GetMapping("/update")
-    public String update() {
-        this.crawlerService.update();
-        return "update";
     }
 
 

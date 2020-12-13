@@ -4,14 +4,13 @@ import com.informationretieval.searchengine.service.ElasticSearchService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import twitter4j.Logger;
 
 @Controller()
 public class ElasticSearchController {
 
-    private static final Logger logger = Logger.getLogger(ElasticSearchController.class);
     private final ElasticSearchService elasticSearchService;
 
     @Autowired
@@ -27,13 +26,8 @@ public class ElasticSearchController {
                        @RequestParam(required = false) boolean synonyms,
                        @RequestParam(required = false) boolean self,
                        @RequestParam(required = false) String selected) {
-        if (selected != null) {
-            logger.info("HOME-CONTROLLER: search user: " + selected + " query: " + query + " hashtags: " + hashtags + " mentions: " + mentions + " synonyms: " + synonyms + " self: " + self);
-        } else {
-            logger.info("HOME-CONTROLLER: search query: " + query + " hashtags: " + hashtags + " mentions: " + mentions + " synonyms: " + synonyms + " self: " + self);
-        }
         model.addAttribute("hits", this.elasticSearchService.search(query, hashtags, mentions, synonyms, self, selected));
-        model.addAttribute("users", this.elasticSearchService.makeUsers(selected));
+        model.addAttribute("users", this.elasticSearchService.getUsers(selected));
         model.addAttribute("topHashtags", this.elasticSearchService.getTopHashtags());
         model.addAttribute("topMentions", this.elasticSearchService.getTopMentions());
         model.addAttribute("query", query);
@@ -42,6 +36,24 @@ public class ElasticSearchController {
         model.addAttribute("synonyms", synonyms);
         model.addAttribute("self", self);
         return "search";
+    }
+
+    @GetMapping("/reset")
+    public String reset() {
+        this.elasticSearchService.reset();
+        return "reset";
+    }
+
+    @GetMapping("/update")
+    public String update() {
+        this.elasticSearchService.update();
+        return "update";
+    }
+
+    @GetMapping("/synonyms")
+    public String synonyms() {
+        this.elasticSearchService.synonyms();
+        return "synonyms";
     }
 
 }

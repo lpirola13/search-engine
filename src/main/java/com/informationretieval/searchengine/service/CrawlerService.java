@@ -7,7 +7,4 @@ public interface CrawlerService {
 
     void start(String user);
 
-    void reset();
-
-    void update();
 }
