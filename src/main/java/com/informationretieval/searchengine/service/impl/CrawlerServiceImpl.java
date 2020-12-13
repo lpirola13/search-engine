@@ -31,53 +31,61 @@ public class CrawlerServiceImpl implements CrawlerService {
         this.elasticSearchService = elasticSearchService;
     }
 
+    @Override
     @Async
     @SuppressWarnings("all")
-    public void start() {
+    public void start(String user) {
+
+        ConfigurationBuilder cb = new ConfigurationBuilder();
+        cb.setJSONStoreEnabled(true);
+        Twitter twitter = new TwitterFactory(cb.build()).getInstance();
+
+        logger.info("CRAWLER-SERVICE: start crawler");
+
+        try {
+            logger.info("CRAWLER-SERVICE: indexing user " + user);
+            List<Status> firstStatus = twitter.getUserTimeline(user, new Paging(1, 1));
+            if (!usersIndexService.index(firstStatus.get(0).getUser())) {
+                logger.error("CRAWLER-SERVICE: error during indexing");
+                return;
+            }
+            Thread.sleep(10000);
+            logger.info("CRAWLER-SERVICE: getting @" + user + "'s timeline");
+            for (int i = 1; i <= pages; i++) {
+                logger.info("CRAWLER-SERVICE: get page " + i + " out of " + pages);
+                List<Status> statuses = twitter.getUserTimeline(user, new Paging(i, 10));
+                if (!tweetsIndexService.index(statuses)) {
+                    logger.error("CRAWLER-SERVICE: error during indexing page " + i);
+                    return;
+                }
+                Thread.sleep(10000);
+            }
+            logger.info("CRAWLER-SERVICE: end crawler");
+        } catch (TwitterException | InterruptedException e) {
+            logger.error(e.getMessage());
+            return;
+        }
+
+    }
+
+    @Override
+    @Async
+    public void reset() {
 
         logger.info("CRAWLER-SERVICE: reset indices");
 
-        if (elasticSearchService.resetIndices()) {
-            ConfigurationBuilder cb = new ConfigurationBuilder();
-            cb.setJSONStoreEnabled(true);
-            Twitter twitter = new TwitterFactory(cb.build()).getInstance();
+        this.elasticSearchService.resetIndices();
+    }
 
-            logger.info("CRAWLER-SERVICE: start crawler");
-
-            try {
-                for (String user : users) {
-                    logger.info("CRAWLER-SERVICE: indexing user " + user);
-                    List<Status> firstStatus = twitter.getUserTimeline(user, new Paging(1, 1));
-                    if (!usersIndexService.index(firstStatus.get(0).getUser())) {
-                        logger.error("CRAWLER-SERVICE: error during indexing");
-                        return;
-                    }
-                    Thread.sleep(10000);
-                    logger.info("CRAWLER-SERVICE: getting @" + user + "'s timeline");
-                    for (int i = 1; i <= pages; i++) {
-                        logger.info("CRAWLER-SERVICE: get page " + i + " out of " + pages);
-                        List<Status> statuses = twitter.getUserTimeline(user, new Paging(i, 10));
-                        if (!tweetsIndexService.index(statuses)) {
-                            logger.error("CRAWLER-SERVICE: error during indexing page " + i);
-                            return;
-                        }
-                        Thread.sleep(10000);
-                    }
-                }
-                logger.info("CRAWLER-SERVICE: end crawler");
-            } catch (TwitterException | InterruptedException e) {
-                logger.error(e.getMessage());
-                return;
-            }
-            logger.info("CRAWLER-SERVICE: start update profiles");
-            if (!this.elasticSearchService.updateUsersProfile()) {
-                logger.error("CRAWLER-SERVICE: error during update profiles");
-                return;
-            }
-            logger.info("CRAWLER-SERVICE: end update profiles");
-        } else {
-            logger.error("CRAWLER-SERVICE: error during reset indices");
+    @Override
+    @Async
+    public void update() {
+        logger.info("CRAWLER-SERVICE: start update profiles");
+        if (!this.elasticSearchService.updateUsersProfile()) {
+            logger.error("CRAWLER-SERVICE: error during update profiles");
+            return;
         }
+        logger.info("CRAWLER-SERVICE: end update profiles");
     }
 
 }

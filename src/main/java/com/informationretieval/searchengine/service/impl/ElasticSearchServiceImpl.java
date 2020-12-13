@@ -101,7 +101,7 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
     }
 
     @Override
-    public List<Map<String, Object>> search(String query, String hashtags, String mentions, boolean synonyms, String id) {
+    public List<Map<String, Object>> search(String query, String hashtags, String mentions, boolean synonyms, boolean self, String id) {
 
         logger.info("ELASTIC-SEARCH-SERVICE: search");
 
@@ -124,6 +124,12 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
                 queryBuilder.must(QueryBuilders.queryStringQuery(query).defaultField("parsed_text").defaultOperator(Operator.AND).analyzer("custom_search_analyzer"));
             } else {
                 queryBuilder.must(QueryBuilders.queryStringQuery(query).defaultField("parsed_text").defaultOperator(Operator.AND));
+            }
+        }
+
+        if (!self) {
+            if (id != null && !id.isEmpty()) {
+                queryBuilder.mustNot(QueryBuilders.termQuery("user.id", id));
             }
         }
 

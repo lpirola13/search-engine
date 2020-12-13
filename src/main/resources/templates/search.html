@@ -10,7 +10,7 @@
 <body class="bg-info overflow-auto">
 <nav class="sticky-top bg-light  border-bottom border-dark overflow-hidden" style="height: 250px;">
     <div class="d-flex justify-content-center pr-3 pl-3 w-100 overflow-hidden">
-        <form class="w-100">
+        <form id="form" class="w-100">
             <div class="form-row">
                 <div class="col pt-3 pl-3 pr-3">
                     <label for="query">Query</label>
@@ -29,25 +29,29 @@
                 <div class="col-2 pt-3 pl-3 pr-3 d-flex justify-content-center align-items-center">
                     <b>Advanced search</b>
                 </div>
-                <div class="col-2 pt-3 pl-3 pr-3 d-flex justify-content-center align-items-center">
-                    <div class="custom-control custom-switch">
+                <div class="col-3 pt-3 pl-3 pr-3 d-flex justify-content-center align-items-center">
+                    <div class="custom-control custom-switch mx-auto">
                         <input type="checkbox" name="synonyms" th:checked="${synonyms}" class="custom-control-input" id="synonyms">
                         <label class="custom-control-label" for="synonyms">Synonyms</label>
                     </div>
+                    <div class="custom-control custom-switch mx-auto">
+                        <input type="checkbox" name="self" th:checked="${self}" class="custom-control-input" checked id="self">
+                        <label class="custom-control-label" for="self">Self tweets</label>
+                    </div>
                 </div>
                 <div class="col-4 pt-3 pl-3 pr-3 d-flex justify-content-center align-items-center">
-                    <div class="col-2 d-flex align-items-center">
+                    <div class="col-4 text-center">
                         <label for="personalization">User</label>
                     </div>
-                    <div class="col-10 p-0">
+                    <div class="col-8 p-0">
                         <select class="custom-select" id="personalization" name="selected">
                             <option th:each="i : ${users}" th:value="${i.id}" th:text="${i.name}" th:selected="${i.selected}"></option>
                         </select>
                     </div>
                 </div>
-                <div class="col-4 pt-3 pl-3 pr-3 d-flex justify-content-center align-items-center">
-                    <input type="submit" class="btn btn-info flex-fill ml-2" value="Search">
-                    <input class="btn btn-danger flex-fill ml-2 mr-2" type="button" name="reset" value="Reset" id="reset" onclick="customReset();">
+                <div class="col-3 pt-3 pl-3 pr-3 d-flex justify-content-center align-items-center">
+                    <input type="button" class="btn btn-info flex-fill ml-2" value="Search" id="search">
+                    <input class="btn btn-danger flex-fill ml-2 mr-2" type="button" name="reset" value="Reset" id="reset">
                 </div>
             </div>
         </form>
@@ -56,7 +60,7 @@
         <div class="col-2 text-center">
             <b>Top Hashtags</b>
         </div>
-        <div class="col-8 d-flex  overflow-auto">
+        <div class="col-10 d-flex  overflow-auto">
             <div th:each="hashtag: ${topHashtags}" class=" p-1 bg-info text-white border border-dark rounded mr-2">
                 <span th:text="'#' + ${hashtag}" class="font-weight-bold"></span>
             </div>
@@ -76,7 +80,7 @@
 <div class="position-fixed bg-info" style="height: 250px;">
 </div>
 <div class="container-fluid justify-content-center pt-3 bg-info  overflow-auto ">
-    <div th:each="hit, index: ${hits}" class="mx-auto p-3 col-md-4 bg-light border border-dark rounded m-2">
+    <div th:each="hit, index: ${hits}" class="mx-auto p-3 col-6 bg-light border border-dark rounded m-2">
         <div class="border border-dark rounded p-2 mb-2">
             <span class="font-weight-bold">Position</span>
             <span th:text="${index.index + 1}"></span>
@@ -98,10 +102,65 @@
 </body>
 </html>
 <script>
-    function customReset()
+
+    $(document).ready(function() {
+
+        const personalization = $('#personalization');
+        const self = $("#self");
+        const search = $("#search");
+        const synonyms = $("#synonyms");
+        const reset = $("#reset");
+        const form = $("#form");
+
+        if (!(personalization.val() === String("empty").valueOf())) {
+            self.attr('disabled', false);
+        } else {
+            self.attr('checked', true);
+            self.attr('disabled', true);
+        }
+
+        search.change(function() {
+            submitForm();
+        });
+
+        personalization.change(function() {
+            if (personalization.val() === String("empty").valueOf()) {
+                self.attr('checked', true);
+                self.attr('disabled', true);
+            } else {
+                self.attr('disabled', false);
+            }
+            submitForm();
+        });
+
+        self.change(function() {
+            submitForm();
+        });
+
+        synonyms.change(function() {
+            submitForm();
+        });
+
+        reset.change(function() {
+            $("#query").val("");
+            $("#hashtags").val("");
+            $("#mentions").val("");
+        });
+
+
+        form.keypress((e) => {
+            if (e.which === 13) {
+                submitForm();
+            }
+        });
+
+
+    });
+
+    function submitForm()
     {
-        document.getElementById("query").value = "";
-        document.getElementById("hashtags").value = "";
-        document.getElementById("mentions").value = "";
+        $("#self").attr('disabled', false);
+        $("#form").submit();
     }
+
 </script>

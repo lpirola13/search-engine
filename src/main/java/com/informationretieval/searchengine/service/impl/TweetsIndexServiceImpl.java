@@ -20,6 +20,8 @@ import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.ParsedSignificantStringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.SignificantTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.heuristic.ChiSquare;
+import org.elasticsearch.search.aggregations.bucket.terms.heuristic.GND;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -59,9 +61,6 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
                     .field("type", "text")
                     .field("term_vector","yes")
                     .field("analyzer","custom_analyzer")
-                    .endObject()
-                    .startObject("lang")
-                    .field("type", "keyword")
                     .endObject()
                     .startObject("created_at")
                     .field("type", "date")
@@ -202,9 +201,11 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
 
         BulkRequest request = new BulkRequest();
 
+        int total = 0;
         if (statuses.size() > 0) {
             for (Status status : statuses) {
                 if (!status.isRetweet()) {
+                    total++;
                     logger.info("TWEETS-INDEX-SERVICE: indexing document " + status.getId());
                     List<String> hashtags = new ArrayList<>();
                     for (HashtagEntity he : status.getHashtagEntities()) {
@@ -232,7 +233,6 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
                                     "parsed_text", EmojiParser.parseToAliases(status.getText(),
                                             EmojiParser.FitzpatrickAction.REMOVE),
                                     "created_at", status.getCreatedAt(),
-                                    "lang", status.getLang(),
                                     "hashtags", hashtags,
                                     "mentions", mentions,
                                     "urls", urls,
@@ -240,8 +240,14 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
                 }
             }
             try {
-                BulkResponse response = restHighLevelClient.bulk(request, RequestOptions.DEFAULT);
-                return !response.hasFailures();
+                if(total>0) {
+                    logger.info("TWEETS-INDEX-SERVICE: indexing " + total + " documents");
+                    BulkResponse response = restHighLevelClient.bulk(request, RequestOptions.DEFAULT);
+                    return !response.hasFailures();
+                } else {
+                    logger.info("TWEETS-INDEX-SERVICE: no documents indexed");
+                    return true;
+                }
             } catch (IOException e) {
                 logger.error(e.getMessage());
                 return false;
@@ -313,7 +319,7 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
 
         searchSourceBuilder.query(QueryBuilders.termQuery("user.id", id));
-        searchSourceBuilder.size(0).aggregation(AggregationBuilders.significantText("keywords", "parsed_text").size(20));
+        searchSourceBuilder.size(0).aggregation(AggregationBuilders.significantText("keywords", "parsed_text").size(20).significanceHeuristic(new GND(false)));
 
         searchRequest.source(searchSourceBuilder);
 

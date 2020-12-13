@@ -25,13 +25,14 @@ public class ElasticSearchController {
                        @RequestParam(required = false) String hashtags,
                        @RequestParam(required = false) String mentions,
                        @RequestParam(required = false) boolean synonyms,
+                       @RequestParam(required = false) boolean self,
                        @RequestParam(required = false) String selected) {
         if (selected != null) {
-            logger.info("HOME-CONTROLLER: search user: " + selected + " query: " + query + " hashtags: " + hashtags + " mentions: " + mentions + " synonyms: " + synonyms);
+            logger.info("HOME-CONTROLLER: search user: " + selected + " query: " + query + " hashtags: " + hashtags + " mentions: " + mentions + " synonyms: " + synonyms + " self: " + self);
         } else {
-            logger.info("HOME-CONTROLLER: search query: " + query + " hashtags: " + hashtags + " mentions: " + mentions + " synonyms: " + synonyms);
+            logger.info("HOME-CONTROLLER: search query: " + query + " hashtags: " + hashtags + " mentions: " + mentions + " synonyms: " + synonyms + " self: " + self);
         }
-        model.addAttribute("hits", this.elasticSearchService.search(query, hashtags, mentions, synonyms, selected));
+        model.addAttribute("hits", this.elasticSearchService.search(query, hashtags, mentions, synonyms, self, selected));
         model.addAttribute("users", this.elasticSearchService.makeUsers(selected));
         model.addAttribute("topHashtags", this.elasticSearchService.getTopHashtags());
         model.addAttribute("topMentions", this.elasticSearchService.getTopMentions());
@@ -39,6 +40,7 @@ public class ElasticSearchController {
         model.addAttribute("hashtags", hashtags);
         model.addAttribute("mentions", mentions);
         model.addAttribute("synonyms", synonyms);
+        model.addAttribute("self", self);
         return "search";
     }
 

@@ -11,7 +11,7 @@ public interface ElasticSearchService {
 
     boolean resetIndices();
     boolean updateUsersProfile();
-    List<Map<String, Object>> search(String query, String hashtags, String mentions, boolean synonyms, String id);
+    List<Map<String, Object>> search(String query, String hashtags, String mentions, boolean synonyms, boolean self, String id);
     List<Map<String,String>> makeUsers(String selected);
     List<String>  getTopHashtags();
     List<String>  getTopMentions();
