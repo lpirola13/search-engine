@@ -18,7 +18,6 @@ import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
@@ -63,6 +62,12 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
                     .startObject("text")
                     .field("type", "text")
                     .field("index", "false")
+                    .startObject("fields")
+                    .startObject("length")
+                    .field("type", "token_count")
+                    .field("analyzer", "standard")
+                    .endObject()
+                    .endObject()
                     .endObject()
                     .startObject("parsed_text")
                     .field("type", "text")
