@@ -113,7 +113,7 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
     }
 
     @Override
-    public List<Map<String, Object>> search(String query, String hashtags, String mentions, boolean synonyms, boolean self, String id) {
+    public List<Map<String, Object>> search(String query, String hashtags, String mentions, boolean synonyms, boolean self, String id, Date fromDate, Date toDate) {
 
         if (id != null) {
             logger.info("HOME-CONTROLLER: search user: " + id + " query: " + query + " hashtags: " + hashtags + " mentions: " + mentions + " synonyms: " + synonyms + " self: " + self);
@@ -141,6 +141,32 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
             } else {
                 queryBuilder.must(QueryBuilders.queryStringQuery(query).defaultField("parsed_text").defaultOperator(Operator.AND));
             }
+        }
+
+        if (fromDate != null && toDate != null) {
+            Calendar calendarFrom = Calendar.getInstance();
+            calendarFrom.setTime(fromDate);
+            calendarFrom.set(Calendar.HOUR_OF_DAY, 1);
+            Calendar calendarTo = Calendar.getInstance();
+            calendarTo.setTime(toDate);
+            calendarTo.add(Calendar.DATE, 1);
+            calendarTo.set(Calendar.HOUR_OF_DAY, 1);
+            queryBuilder.must(QueryBuilders.rangeQuery("created_at").gte(calendarFrom.getTime()).lt(calendarTo.getTime()));
+        }
+
+        if (fromDate == null && toDate != null) {
+            Calendar calendarTo = Calendar.getInstance();
+            calendarTo.setTime(toDate);
+            calendarTo.add(Calendar.DATE, 1);
+            calendarTo.set(Calendar.HOUR_OF_DAY, 1);
+            queryBuilder.must(QueryBuilders.rangeQuery("created_at").lt(calendarTo.getTime()));
+        }
+
+        if (fromDate != null && toDate == null) {
+            Calendar calendarFrom = Calendar.getInstance();
+            calendarFrom.setTime(fromDate);
+            calendarFrom.set(Calendar.HOUR_OF_DAY, 1);
+            queryBuilder.must(QueryBuilders.rangeQuery("created_at").gte(calendarFrom.getTime()));
         }
 
         if (!self) {
