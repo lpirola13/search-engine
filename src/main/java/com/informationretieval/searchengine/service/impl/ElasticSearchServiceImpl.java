@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.informationretieval.searchengine.service.ElasticSearchService;
 import com.informationretieval.searchengine.service.TweetsIndexService;
 import com.informationretieval.searchengine.service.UsersIndexService;
+import com.vdurmont.emoji.EmojiParser;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -27,6 +28,8 @@ import twitter4j.User;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class ElasticSearchServiceImpl implements ElasticSearchService {
@@ -136,6 +139,9 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
         BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
 
         if (query != null && !query.isEmpty()) {
+            query = EmojiParser.parseToAliases(query, EmojiParser.FitzpatrickAction.REMOVE);
+            query = query.replaceAll("(_)", " ");
+            query = query.replaceAll("(:)", " ");
             if (synonyms) {
                 queryBuilder.must(QueryBuilders.queryStringQuery(query).defaultField("parsed_text").defaultOperator(Operator.AND).analyzer("custom_search_analyzer"));
             } else {
