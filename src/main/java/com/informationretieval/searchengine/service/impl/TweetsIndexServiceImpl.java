@@ -69,7 +69,7 @@ public class TweetsIndexServiceImpl implements TweetsIndexService {
                     .startObject("fields")
                     .startObject("length")
                     .field("type", "token_count")
-                    .field("analyzer", "standard")
+                    .field("analyzer", "custom_analyzer")
                     .field("store", "true")
                     .endObject()
                     .endObject()
