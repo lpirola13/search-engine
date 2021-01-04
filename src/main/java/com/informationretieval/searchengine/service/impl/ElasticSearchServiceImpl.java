@@ -152,26 +152,28 @@ public class ElasticSearchServiceImpl implements ElasticSearchService {
         if (fromDate != null && toDate != null) {
             Calendar calendarFrom = Calendar.getInstance();
             calendarFrom.setTime(fromDate);
-            calendarFrom.set(Calendar.HOUR_OF_DAY, 1);
+            calendarFrom.set(Calendar.HOUR_OF_DAY, 0);
+            calendarFrom.set(Calendar.MINUTE, 1);
             Calendar calendarTo = Calendar.getInstance();
             calendarTo.setTime(toDate);
-            calendarTo.add(Calendar.DATE, 1);
-            calendarTo.set(Calendar.HOUR_OF_DAY, 1);
+            calendarTo.set(Calendar.HOUR_OF_DAY, 23);
+            calendarTo.set(Calendar.MINUTE, 59);
             queryBuilder.must(QueryBuilders.rangeQuery("created_at").gte(calendarFrom.getTime()).lt(calendarTo.getTime()));
         }
 
         if (fromDate == null && toDate != null) {
             Calendar calendarTo = Calendar.getInstance();
             calendarTo.setTime(toDate);
-            calendarTo.add(Calendar.DATE, 1);
-            calendarTo.set(Calendar.HOUR_OF_DAY, 1);
+            calendarTo.set(Calendar.HOUR_OF_DAY, 23);
+            calendarTo.set(Calendar.MINUTE, 59);
             queryBuilder.must(QueryBuilders.rangeQuery("created_at").lt(calendarTo.getTime()));
         }
 
         if (fromDate != null && toDate == null) {
             Calendar calendarFrom = Calendar.getInstance();
             calendarFrom.setTime(fromDate);
-            calendarFrom.set(Calendar.HOUR_OF_DAY, 1);
+            calendarFrom.set(Calendar.HOUR_OF_DAY, 0);
+            calendarFrom.set(Calendar.MINUTE, 1);
             queryBuilder.must(QueryBuilders.rangeQuery("created_at").gte(calendarFrom.getTime()));
         }
 
