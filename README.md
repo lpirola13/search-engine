@@ -13,9 +13,6 @@ user interface is provided through a simple web-app developed using the Spring a
 
 </div>
 
-## Usage
-[![heroku](https://img.shields.io/badge/OPEN%20APP-Heroku-430098?style=for-the-badge&logo=heroku&logoColor=white)](https://information-retrieval-search.herokuapp.com)
-
 
 
 ## Authors
