@@ -1,6 +1,7 @@
 # Personalized Search Engine for microblog
 [![made-with-java](https://img.shields.io/badge/MADE%20WITH-Java-ED8B00?style=for-the-badge&logo=java&logoColor=white)](https://www.java.com)
 [![made-with-spring](https://img.shields.io/badge/MADE%20WITH-Spring-6DB33F?style=for-the-badge&logo=spring&logoColor=white)](https://spring.io)
+[![made-with-elasticsearch](https://img.shields.io/badge/MADE%20WITH-Elasticsearch%20-%2312D833.svg?&style=for-the-badge&logo=Elasticsearch&logoColor=white)](https://www.elastic.co/elasticsearch/)
 
 
 
