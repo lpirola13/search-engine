@@ -23,3 +23,7 @@ user interface is provided through a simple web-app developed using the Spring a
 [![gmail](https://img.shields.io/badge/Gmail-D14836?style=flat-square&logo=gmail&logoColor=white)](mailto:l.pirola13@campus.unimib.it) &nbsp;
 [![github](https://img.shields.io/badge/GitHub-100000?style=flat-square&logo=github&logoColor=white)](https://github.com/lpirola13) &nbsp;
 [![linkedin](https://img.shields.io/badge/LinkedIn-0077B5?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lorenzo-pirola-230275197/)
+
+
+## Demo
+![Alt Text](search-engine.gif)
