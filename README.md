@@ -26,4 +26,4 @@ user interface is provided through a simple web-app developed using the Spring a
 
 
 ## Demo
-![Alt Text](search-engine.gif)
+<img src="search-engine.gif" style="width:100%;" />
